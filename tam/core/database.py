@@ -2,6 +2,10 @@ from beanie import init_beanie
 from pymongo import AsyncMongoClient
 
 from tam.identidade.models import UsuarioModel
+from tam.treinamento.models import (
+    MatriculaTreinamentoModel,
+    TreinamentoModel,
+)
 
 from .settings import Settings
 
@@ -10,4 +14,11 @@ async def init_db():
     settings = Settings()
     client = AsyncMongoClient(settings.DATABASE_URL)
 
-    await init_beanie(database=client.tam_db, document_models=[UsuarioModel])
+    await init_beanie(
+        database=client.tam_db,
+        document_models=[
+            UsuarioModel,
+            TreinamentoModel,
+            MatriculaTreinamentoModel,
+        ],
+    )
