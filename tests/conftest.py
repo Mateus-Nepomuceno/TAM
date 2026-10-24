@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from itertools import count
 
@@ -11,6 +12,7 @@ from tam.core.security import get_password_hash
 from tam.core.settings import Settings
 from tam.identidade.models import UsuarioModel
 from tam.identidade.schemas import PerfilUsuario
+from tam.projeto.models import ProjetoModel, SaudeProjeto, StatusProjeto
 
 TEST_DB_NAME = 'tam_test'
 SENHA_PADRAO = 'senha-segura-123'
@@ -22,7 +24,8 @@ def client():
 
     async def init_test_db():
         await init_beanie(
-            database=mongo[TEST_DB_NAME], document_models=[UsuarioModel]
+            database=mongo[TEST_DB_NAME],
+            document_models=[UsuarioModel, ProjetoModel],
         )
 
     mp = pytest.MonkeyPatch()
@@ -39,6 +42,7 @@ def client():
 @pytest.fixture(autouse=True)
 def limpar_banco(client):
     client.portal.call(UsuarioModel.delete_all)
+    client.portal.call(ProjetoModel.delete_all)
 
 
 @pytest.fixture
@@ -86,3 +90,32 @@ def gestor(criar_usuario):
 @pytest.fixture
 def membro(criar_usuario):
     return criar_usuario(PerfilUsuario.MEMBRO)
+
+
+@pytest.fixture
+def criar_projeto(client, admin):
+    contador = count()
+
+    def _criar(responsavel=None, **campos):
+        n = next(contador)
+        resp = responsavel or admin
+        agora = datetime.now(timezone.utc)
+        projeto = ProjetoModel(
+            nome=campos.get('nome', f'Projeto {n}'),
+            descricao=campos.get('descricao', f'Descrição {n}'),
+            responsavel_id=resp.id,
+            status=campos.get('status', StatusProjeto.PLANEJAMENTO),
+            saude_projeto=campos.get('saude_projeto', SaudeProjeto.NO_PRAZO),
+            percentual_progresso=campos.get('percentual_progresso', 0.0),
+            membros_equipe=campos.get('membros_equipe', []),
+            marcos=campos.get('marcos', []),
+            historico_status=campos.get('historico_status', []),
+            data_inicio=campos.get('data_inicio', agora),
+            data_entrega=campos.get(
+                'data_entrega', agora + timedelta(days=30)
+            ),
+        )
+        client.portal.call(projeto.insert)
+        return projeto
+
+    return _criar

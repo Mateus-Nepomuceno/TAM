@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from tam.core.database import init_db
 from tam.identidade.routers import auth, usuarios
+from tam.projeto.routers import projeto
 
 
 @asynccontextmanager
@@ -16,3 +17,4 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(auth.router)
 app.include_router(usuarios.router)
+app.include_router(projeto.router)
